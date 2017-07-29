@@ -973,8 +973,18 @@ trait ScalaReflection extends Logging {
     }
   }
 
+  /** If our type is a Scala trait it may have a companion object that
+    * only defines a constructor via `apply` method.
+    */
+  def getCompanionConstructor(tpe: Type): Symbol = {
+    tpe.typeSymbol.asClass.companion.asTerm.typeSignature.member(universe.TermName("apply"))
+  }
+
   protected def constructParams(tpe: Type): Seq[Symbol] = {
-    val constructorSymbol = tpe.dealias.member(termNames.CONSTRUCTOR)
+    val constructorSymbol = tpe.member(termNames.CONSTRUCTOR) match {
+      case NoSymbol => getCompanionConstructor(tpe)
+      case sym => sym
+    }
     val params = if (constructorSymbol.isMethod) {
       constructorSymbol.asMethod.paramLists
     } else {
